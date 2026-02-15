@@ -1,0 +1,37 @@
+name: Build Aseprite (Windows x64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          choco install -y cmake ninja
+
+      - name: Clone Skia
+        run: |
+          git clone https://github.com/aseprite/skia.git --depth=1
+
+      - name: Configure
+        run: |
+          mkdir build
+          cmake -S . -B build -G Ninja ^
+            -DSKIA_DIR=${{ github.workspace }}\skia ^
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aseprite-windows-x64
+          path: build/bin
