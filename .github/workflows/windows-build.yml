@@ -1,32 +1,40 @@
-name: Build Aseprite (Windows x64)
+name: Build Aseprite for Windows
 
-on:
-  workflow_dispatch:
+on: [workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout (with submodules)
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+    - name: Checkout Aseprite
+      uses: actions/checkout@v4
+      with:
+        repository: aseprite/aseprite
+        submodules: recursive
 
-      - name: Install dependencies
-        run: choco install -y cmake ninja
+    - name: Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Clone Skia
-        run: git clone https://github.com/aseprite/skia.git --depth=1
+    - name: Install dependencies (CMake, Ninja)
+      run: |
+        choco install -y cmake ninja
 
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DSKIA_DIR=${{ github.workspace }}\skia -DCMAKE_BUILD_TYPE=Release
+    - name: Download and extract Skia
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Windows-Release-x64.zip" -OutFile "skia.zip"
+        Expand-Archive -Path "skia.zip" -DestinationPath "C:\deps\skia"
 
-      - name: Build
-        run: cmake --build build --config Release
+    - name: Configure Aseprite
+      run: |
+        mkdir build
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLAF_BACKEND=skia -DSKIA_DIR=C:\deps\skia -DSKIA_LIBRARY_DIR=C:\deps\skia\out\Release-x64 -DSKIA_LIBRARY=C:\deps\skia\out\Release-x64\skia.lib
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aseprite-windows-x64
-          path: build/bin
+    - name: Build Aseprite
+      run: cmake --build build --config Release
+
+    - name: Upload Aseprite executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: aseprite-windows
+        path: build/bin/aseprite.exe
