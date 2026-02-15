@@ -8,27 +8,22 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout (with submodules)
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install dependencies
-        run: |
-          choco install -y cmake ninja
+        run: choco install -y cmake ninja
 
       - name: Clone Skia
-        run: |
-          git clone https://github.com/aseprite/skia.git --depth=1
+        run: git clone https://github.com/aseprite/skia.git --depth=1
 
       - name: Configure
-        run: |
-          mkdir build
-          cmake -S . -B build -G Ninja ^
-            -DSKIA_DIR=${{ github.workspace }}\skia ^
-            -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DSKIA_DIR=${{ github.workspace }}\skia -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: |
-          cmake --build build --config Release
+        run: cmake --build build --config Release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
