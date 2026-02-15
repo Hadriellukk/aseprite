@@ -20,15 +20,28 @@ jobs:
       run: |
         choco install -y cmake ninja
 
-    - name: Download and extract Skia
+    - name: Download and extract Skia (m124)
       run: |
-        Invoke-WebRequest -Uri "https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Windows-Release-x64.zip" -OutFile "skia.zip"
+        # Usando a versão m124 que é a mais recente recomendada
+        Invoke-WebRequest -Uri "https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip" -OutFile "skia.zip"
         Expand-Archive -Path "skia.zip" -DestinationPath "C:\deps\skia"
+        # Verificar se o arquivo skia.lib existe para evitar erros de configuração
+        if (Test-Path "C:\deps\skia\out\Release-x64\skia.lib" ) {
+            Write-Host "Skia extraído com sucesso!"
+        } else {
+            Write-Error "Erro: skia.lib não encontrado em C:\deps\skia\out\Release-x64\"
+            exit 1
+        }
 
     - name: Configure Aseprite
       run: |
         mkdir build
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLAF_BACKEND=skia -DSKIA_DIR=C:\deps\skia -DSKIA_LIBRARY_DIR=C:\deps\skia\out\Release-x64 -DSKIA_LIBRARY=C:\deps\skia\out\Release-x64\skia.lib
+        cmake -S . -B build -G Ninja `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DLAF_BACKEND=skia `
+          -DSKIA_DIR=C:\deps\skia `
+          -DSKIA_LIBRARY_DIR=C:\deps\skia\out\Release-x64 `
+          -DSKIA_LIBRARY=C:\deps\skia\out\Release-x64\skia.lib
 
     - name: Build Aseprite
       run: cmake --build build --config Release
