@@ -22,16 +22,8 @@ jobs:
 
     - name: Download and extract Skia (m124)
       run: |
-        # Usando a versão m124 que é a mais recente recomendada
         Invoke-WebRequest -Uri "https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip" -OutFile "skia.zip"
         Expand-Archive -Path "skia.zip" -DestinationPath "C:\deps\skia"
-        # Verificar se o arquivo skia.lib existe para evitar erros de configuração
-        if (Test-Path "C:\deps\skia\out\Release-x64\skia.lib" ) {
-            Write-Host "Skia extraído com sucesso!"
-        } else {
-            Write-Error "Erro: skia.lib não encontrado em C:\deps\skia\out\Release-x64\"
-            exit 1
-        }
 
     - name: Configure Aseprite
       run: |
@@ -41,13 +33,34 @@ jobs:
           -DLAF_BACKEND=skia `
           -DSKIA_DIR=C:\deps\skia `
           -DSKIA_LIBRARY_DIR=C:\deps\skia\out\Release-x64 `
-          -DSKIA_LIBRARY=C:\deps\skia\out\Release-x64\skia.lib
+          -DSKIA_LIBRARY=C:\deps\skia\out\Release-x64\skia.lib `
+          -DUSE_SHARED_CURL=OFF `
+          -DUSE_SHARED_ZLIB=OFF `
+          -DUSE_SHARED_LIBPNG=OFF `
+          -DUSE_SHARED_TINYXML=OFF `
+          -DUSE_SHARED_PIXMAN=OFF `
+          -DUSE_SHARED_FREETYPE=OFF `
+          -DUSE_SHARED_HARFBUZZ=OFF `
+          -DENABLE_UPDATER=OFF
 
     - name: Build Aseprite
       run: cmake --build build --config Release
 
-    - name: Upload Aseprite executable
+    - name: Prepare Release Folder
+      run: |
+        mkdir release
+        copy build\bin\aseprite.exe release\
+        xcopy /E /I data release\data
+        # Se ainda houver dependência de DLLs do OpenSSL, tentamos copiá-las se existirem
+        if (Test-Path "C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll" ) {
+            copy "C:\Program Files\OpenSSL\bin\libcrypto-3-x64.dll" release\
+        }
+        if (Test-Path "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll") {
+            copy "C:\Program Files\OpenSSL\bin\libssl-3-x64.dll" release\
+        }
+
+    - name: Upload Aseprite Bundle
       uses: actions/upload-artifact@v4
       with:
-        name: aseprite-windows
-        path: build/bin/aseprite.exe
+        name: aseprite-windows-full
+        path: release/
